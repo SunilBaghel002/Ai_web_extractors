@@ -1,0 +1,75 @@
+{
+    "title": "AI Web Content Extractor Input",
+    "description": "Configure the web content extraction for AI agents",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "urls": {
+            "title": "URLs to Extract",
+            "type": "array",
+            "description": "List of webpage URLs to extract content from",
+            "editor": "stringList",
+            "prefill": ["https://docs.apify.com/academy/web-scraping-for-beginners"]
+        },
+        "mode": {
+            "title": "Extraction Mode",
+            "type": "string",
+            "description": "How to run the extractor",
+            "enum": ["extractor", "mcp-server"],
+            "enumTitles": ["Content Extractor", "MCP Server Mode"],
+            "default": "extractor"
+        },
+        "outputFormat": {
+            "title": "Output Format",
+            "type": "string",
+            "description": "Format of the extracted content",
+            "enum": ["markdown", "text", "html", "structured"],
+            "enumTitles": ["Markdown", "Plain Text", "Clean HTML", "Structured JSON"],
+            "default": "markdown"
+        },
+        "extractOptions": {
+            "title": "Extraction Options",
+            "type": "object",
+            "description": "Configure what to extract",
+            "editor": "json",
+            "default": {
+                "includeImages": true,
+                "includeLinks": true,
+                "includeMetadata": true,
+                "includeTables": true,
+                "includeCode": true
+            }
+        },
+        "crawlOptions": {
+            "title": "Crawl Options",
+            "type": "object",
+            "description": "Configure crawling behavior",
+            "editor": "json",
+            "default": {
+                "maxDepth": 0,
+                "maxPages": 10,
+                "sameDomain": true
+            }
+        },
+        "aiOptions": {
+            "title": "AI Enhancement Options",
+            "type": "object",
+            "description": "AI-specific processing options",
+            "editor": "json",
+            "default": {
+                "generateSummary": false,
+                "chunkContent": false,
+                "chunkSize": 1000,
+                "chunkOverlap": 100
+            }
+        },
+        "proxyConfiguration": {
+            "title": "Proxy Configuration",
+            "type": "object",
+            "description": "Proxy settings for accessing websites",
+            "editor": "proxy",
+            "sectionCaption": "Proxy Settings"
+        }
+    },
+    "required": ["urls"]
+}

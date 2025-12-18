@@ -1,0 +1,18 @@
+{
+  "actorSpecification": 1,
+  "name": "ai-web-content-extractor",
+  "title": "AI Web Content Extractor",
+  "description": "Extract clean, structured content from websites for AI agents and LLMs. Includes MCP server for direct AI integration.",
+  "version": "1.0.0",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "readme": "../README.md",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Extracted Content",
+      "description": "Clean, structured content extracted from websites"
+    }
+  }
+}
