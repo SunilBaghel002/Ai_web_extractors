@@ -1,0 +1,22 @@
+{
+  "urls": ["https://docs.apify.com/academy/web-scraping-for-beginners"],
+  "mode": "extractor",
+  "outputFormat": "markdown",
+  "extractOptions": {
+    "includeImages": true,
+    "includeLinks": true,
+    "includeMetadata": true,
+    "includeTables": true,
+    "includeCode": true
+  },
+  "crawlOptions": {
+    "maxDepth": 0,
+    "maxPages": 10,
+    "sameDomain": true
+  },
+  "aiOptions": {
+    "chunkContent": false,
+    "chunkSize": 1000,
+    "chunkOverlap": 100
+  }
+}
