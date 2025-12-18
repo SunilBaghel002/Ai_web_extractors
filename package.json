@@ -1,25 +1,38 @@
 {
-  "name": "ai_web_extractors",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/SunilBaghel002/Ai_web_extractors.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/SunilBaghel002/Ai_web_extractors/issues"
-  },
-  "homepage": "https://github.com/SunilBaghel002/Ai_web_extractors#readme",
-  "description": "",
-  "dependencies": {
-    "apify": "^3.5.2",
-    "crawlee": "^3.15.3",
-    "playwright": "^1.57.0"
-  }
+    "name": "ai-web-content-extractor",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "Extract clean, structured content from websites for AI agents and LLMs. Includes MCP server for direct AI integration.",
+    "main": "src/main.js",
+    "scripts": {
+        "start": "node src/main.js",
+        "test": "node --test",
+        "lint": "eslint src/",
+        "format": "prettier --write src/"
+    },
+    "keywords": [
+        "apify",
+        "actor",
+        "web-scraping",
+        "ai",
+        "llm",
+        "mcp",
+        "content-extraction",
+        "rag",
+        "ai-agents"
+    ],
+    "author": "Your Name",
+    "license": "MIT",
+    "dependencies": {
+        "apify": "^3.5.2",
+        "crawlee": "^3.15.3",
+        "playwright": "^1.57.0"
+    },
+    "devDependencies": {
+        "eslint": "^8.0.0",
+        "prettier": "^3.0.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
 }
