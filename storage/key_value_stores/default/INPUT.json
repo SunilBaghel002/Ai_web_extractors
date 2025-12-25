@@ -1,6 +1,5 @@
-
 {
-    "urls": ["https://example.com"],
-    "mode": "extractor",
-    "outputFormat": "markdown"
+  "urls": ["https://docs.apify.com/academy/web-scraping-for-beginners"],
+  "mode": "extractor",
+  "outputFormat": "markdown"
 }

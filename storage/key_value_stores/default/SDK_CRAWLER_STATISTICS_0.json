@@ -1,29 +1,50 @@
 {
-  "requestsFinished": 1,
-  "requestsFailed": 0,
-  "requestsRetries": 0,
+  "requestsFinished": 0,
+  "requestsFailed": 1,
+  "requestsRetries": 1,
   "requestsFailedPerMinute": 0,
-  "requestsFinishedPerMinute": 9,
-  "requestMinDurationMillis": 2767,
-  "requestMaxDurationMillis": 2767,
-  "requestTotalFailedDurationMillis": 0,
-  "requestTotalFinishedDurationMillis": 2767,
-  "crawlerStartedAt": "2025-12-25T12:26:50.402Z",
-  "crawlerFinishedAt": "2025-12-25T12:26:56.513Z",
-  "statsPersistedAt": "2025-12-25T12:26:56.513Z",
-  "crawlerRuntimeMillis": 6438,
-  "crawlerLastStartTimestamp": 1766665610075,
+  "requestsFinishedPerMinute": 0,
+  "requestMinDurationMillis": null,
+  "requestMaxDurationMillis": 0,
+  "requestTotalFailedDurationMillis": 30147,
+  "requestTotalFinishedDurationMillis": 0,
+  "crawlerStartedAt": "2025-12-25T12:35:53.805Z",
+  "crawlerFinishedAt": "2025-12-25T12:37:59.358Z",
+  "statsPersistedAt": "2025-12-25T12:37:59.358Z",
+  "crawlerRuntimeMillis": 125924,
+  "crawlerLastStartTimestamp": 1766666153434,
   "requestRetryHistogram": [
+    null,
+    null,
+    null,
     1
   ],
   "statsId": 0,
-  "requestAvgFailedDurationMillis": null,
-  "requestAvgFinishedDurationMillis": 2767,
-  "requestTotalDurationMillis": 2767,
+  "requestAvgFailedDurationMillis": 30147,
+  "requestAvgFinishedDurationMillis": null,
+  "requestTotalDurationMillis": 30147,
   "requestsTotal": 1,
-  "requestsWithStatusCode": {
-    "200": 1
+  "requestsWithStatusCode": {},
+  "errors": {
+    "C:\\Users\\lenovo\\OneDrive\\Desktop\\Projects\\Ai_web_extractors\\node_modules\\@crawlee\\core\\crawlers\\crawler_utils.js:13:11": {
+      "missing error code": {
+        "Error": {
+          "Navigation timed out after 30 seconds.": {
+            "count": 1
+          }
+        }
+      }
+    }
   },
-  "errors": {},
-  "retryErrors": {}
+  "retryErrors": {
+    "C:\\Users\\lenovo\\OneDrive\\Desktop\\Projects\\Ai_web_extractors\\node_modules\\@crawlee\\core\\crawlers\\crawler_utils.js:13:11": {
+      "missing error code": {
+        "Error": {
+          "Navigation timed out after 30 seconds.": {
+            "count": 3
+          }
+        }
+      }
+    }
+  }
 }
