@@ -1,50 +1,29 @@
 {
-  "requestsFinished": 0,
-  "requestsFailed": 1,
-  "requestsRetries": 1,
-  "requestsFailedPerMinute": 1,
-  "requestsFinishedPerMinute": 0,
-  "requestMinDurationMillis": null,
-  "requestMaxDurationMillis": 0,
-  "requestTotalFailedDurationMillis": 12390,
-  "requestTotalFinishedDurationMillis": 0,
-  "crawlerStartedAt": "2025-12-25T12:20:45.434Z",
-  "crawlerFinishedAt": "2025-12-25T12:21:40.274Z",
-  "statsPersistedAt": "2025-12-25T12:21:40.274Z",
-  "crawlerRuntimeMillis": 55165,
-  "crawlerLastStartTimestamp": 1766665245109,
+  "requestsFinished": 1,
+  "requestsFailed": 0,
+  "requestsRetries": 0,
+  "requestsFailedPerMinute": 0,
+  "requestsFinishedPerMinute": 9,
+  "requestMinDurationMillis": 2767,
+  "requestMaxDurationMillis": 2767,
+  "requestTotalFailedDurationMillis": 0,
+  "requestTotalFinishedDurationMillis": 2767,
+  "crawlerStartedAt": "2025-12-25T12:26:50.402Z",
+  "crawlerFinishedAt": "2025-12-25T12:26:56.513Z",
+  "statsPersistedAt": "2025-12-25T12:26:56.513Z",
+  "crawlerRuntimeMillis": 6438,
+  "crawlerLastStartTimestamp": 1766665610075,
   "requestRetryHistogram": [
-    null,
-    null,
-    null,
     1
   ],
   "statsId": 0,
-  "requestAvgFailedDurationMillis": 12390,
-  "requestAvgFinishedDurationMillis": null,
-  "requestTotalDurationMillis": 12390,
+  "requestAvgFailedDurationMillis": null,
+  "requestAvgFinishedDurationMillis": 2767,
+  "requestTotalDurationMillis": 2767,
   "requestsTotal": 1,
-  "requestsWithStatusCode": {},
-  "errors": {
-    "C:\\Users\\lenovo\\OneDrive\\Desktop\\Projects\\Ai_web_extractors\\node_modules\\@crawlee\\playwright\\internals\\utils\\playwright-utils.js:166:17": {
-      "missing error code": {
-        "Error": {
-          "page.goto: net::ERR_EMPTY_RESPONSE at https://docs.apify.com/academy/web-scraping-for-beginners": {
-            "count": 1
-          }
-        }
-      }
-    }
+  "requestsWithStatusCode": {
+    "200": 1
   },
-  "retryErrors": {
-    "C:\\Users\\lenovo\\OneDrive\\Desktop\\Projects\\Ai_web_extractors\\node_modules\\@crawlee\\playwright\\internals\\utils\\playwright-utils.js:166:17": {
-      "missing error code": {
-        "Error": {
-          "page.goto: net::ERR_EMPTY_RESPONSE at https://docs.apify.com/academy/web-scraping-for-beginners": {
-            "count": 3
-          }
-        }
-      }
-    }
-  }
+  "errors": {},
+  "retryErrors": {}
 }

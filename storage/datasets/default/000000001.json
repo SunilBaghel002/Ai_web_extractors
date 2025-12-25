@@ -1,0 +1,58 @@
+{
+	"url": "https://example.com",
+	"canonicalUrl": "https://example.com",
+	"timestamp": "2025-12-25T12:26:56.328Z",
+	"title": "Example Domain",
+	"content": "# Example Domain\n\n> Source: https://example.com/\n\n---\n\n## Content\n\nExample Domain\n\nThis domain is for use in documentation examples without needing permission. Avoid use in operations.\n\nLearn more\n\n---\n\n## References & Links\n\n- [Learn more](https://iana.org/domains/example) ↗\n",
+	"headings": [
+		{
+			"level": 1,
+			"text": "Example Domain",
+			"id": "heading-0"
+		}
+	],
+	"links": [
+		{
+			"url": "https://iana.org/domains/example",
+			"text": "Learn more",
+			"isExternal": true,
+			"title": null
+		}
+	],
+	"images": [],
+	"tables": [],
+	"codeBlocks": [],
+	"metadata": {
+		"title": "Example Domain",
+		"description": null,
+		"keywords": null,
+		"author": null,
+		"ogTitle": null,
+		"ogDescription": null,
+		"ogImage": null,
+		"ogType": null,
+		"ogUrl": null,
+		"ogSiteName": null,
+		"twitterCard": null,
+		"twitterTitle": null,
+		"twitterDescription": null,
+		"twitterImage": null,
+		"canonicalUrl": null,
+		"robots": null,
+		"viewport": "width=device-width, initial-scale=1",
+		"publishedTime": null,
+		"modifiedTime": null,
+		"favicon": null,
+		"jsonLd": null,
+		"language": "en",
+		"wordCount": 19,
+		"charCount": 129,
+		"extractedAt": "2025-12-25T12:26:56.329Z"
+	},
+	"ai": {
+		"rawText": "Example Domain\n\nThis domain is for use in documentation examples without needing permission. Avoid use in operations.\n\nLearn more",
+		"contentType": "webpage",
+		"format": "markdown",
+		"isChunked": false
+	}
+}
