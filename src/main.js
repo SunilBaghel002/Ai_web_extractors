@@ -1,6 +1,6 @@
 /**
- * AI Web Content Extractor - Main Entry Point
- * With Anti-Bot Detection Features
+ * AI Web Content Extractor - FIXED VERSION
+ * Processes multiple URLs in a single crawler run
  */
 
 import { Actor } from "apify";
@@ -82,11 +82,34 @@ function formatAsMarkdown(data) {
     `# ${data.title}`,
     "",
     `> Source: ${data.url}`,
+    `> Extracted: ${new Date().toISOString()}`,
     "",
     "---",
     "",
-    data.textContent,
   ];
+
+  // Add description if available
+  if (data.description) {
+    lines.push(`**Description:** ${data.description}`);
+    lines.push("");
+  }
+
+  // Add table of contents if multiple headings
+  if (data.headings && data.headings.length > 2) {
+    lines.push("## Table of Contents");
+    lines.push("");
+    data.headings.forEach((h) => {
+      const indent = "  ".repeat(h.level - 1);
+      lines.push(`${indent}- ${h.text}`);
+    });
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+  }
+
+  lines.push("## Content");
+  lines.push("");
+  lines.push(data.textContent);
 
   return lines.join("\n");
 }
@@ -114,6 +137,26 @@ function getMCPTools() {
       },
     },
     {
+      name: "extract_multiple",
+      description: "Extract content from multiple webpages",
+      inputSchema: {
+        type: "object",
+        properties: {
+          urls: {
+            type: "array",
+            items: { type: "string" },
+            description: "URLs to extract",
+          },
+          format: {
+            type: "string",
+            enum: ["markdown", "text"],
+            default: "markdown",
+          },
+        },
+        required: ["urls"],
+      },
+    },
+    {
       name: "extract_with_chunking",
       description: "Extract content with RAG-ready chunks",
       inputSchema: {
@@ -129,7 +172,7 @@ function getMCPTools() {
   ];
 }
 
-async function handleMCPRequest(request, extractFn) {
+async function handleMCPRequest(request, runCrawler) {
   const { method, params, id } = request;
 
   console.log(`📥 MCP Request: ${method}`);
@@ -154,25 +197,28 @@ async function handleMCPRequest(request, extractFn) {
         const { name, arguments: args } = params;
         console.log(`🔧 Calling tool: ${name}`);
 
-        if (name === "extract_webpage" || name === "extract_with_chunking") {
-          const extracted = await extractFn(args.url, {
-            format: args.format || "markdown",
-            chunkContent: name === "extract_with_chunking",
-            chunkSize: args.chunkSize || 1000,
-            chunkOverlap: args.chunkOverlap || 100,
-          });
-
-          result = {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(extracted, null, 2),
-              },
-            ],
-          };
+        let urls = [];
+        if (name === "extract_multiple") {
+          urls = args.urls;
         } else {
-          throw new Error(`Unknown tool: ${name}`);
+          urls = [args.url];
         }
+
+        const extracted = await runCrawler(urls, {
+          format: args.format || "markdown",
+          chunkContent: name === "extract_with_chunking",
+          chunkSize: args.chunkSize || 1000,
+          chunkOverlap: args.chunkOverlap || 100,
+        });
+
+        result = {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(extracted, null, 2),
+            },
+          ],
+        };
         break;
 
       default:
@@ -190,10 +236,10 @@ async function handleMCPRequest(request, extractFn) {
 }
 
 // ============================================================
-// MAIN EXTRACTION FUNCTION (WITH ANTI-BOT FEATURES)
+// MAIN CRAWLER FUNCTION (FIXED - Processes ALL URLs)
 // ============================================================
 
-async function extractFromUrl(url, options = {}) {
+async function runCrawler(urls, options = {}) {
   const {
     format = "markdown",
     chunkContent = false,
@@ -201,17 +247,24 @@ async function extractFromUrl(url, options = {}) {
     chunkOverlap = 100,
   } = options;
 
-  let result = null;
+  const results = [];
+  let successCount = 0;
+  let failCount = 0;
+
+  console.log(`\n📋 Processing ${urls.length} URL(s)...\n`);
 
   const crawler = new PlaywrightCrawler({
-    maxRequestsPerCrawl: 1,
+    // ⭐ FIXED: Allow multiple requests
+    maxRequestsPerCrawl: urls.length + 10, // Add buffer for redirects
+    maxConcurrency: 3, // Process 3 pages simultaneously
+
+    // Timeouts
     requestHandlerTimeoutSecs: 60,
     navigationTimeoutSecs: 30,
 
-    // ⭐ ANTI-BOT DETECTION SETTINGS ⭐
+    // Browser settings
     headless: true,
 
-    // Use browser with stealth settings
     launchContext: {
       launchOptions: {
         args: [
@@ -222,14 +275,13 @@ async function extractFromUrl(url, options = {}) {
           "--no-first-run",
           "--no-zygote",
           "--disable-gpu",
-          "--disable-blink-features=AutomationControlled", // Hide automation
+          "--disable-blink-features=AutomationControlled",
         ],
       },
     },
 
-    // Browser pool settings for stealth
     browserPoolOptions: {
-      useFingerprints: true, // Use browser fingerprinting
+      useFingerprints: true,
       fingerprintOptions: {
         fingerprintGeneratorOptions: {
           browsers: ["chrome"],
@@ -238,10 +290,9 @@ async function extractFromUrl(url, options = {}) {
       },
     },
 
-    // Pre-navigation hook to set headers
+    // Pre-navigation hook
     preNavigationHooks: [
       async ({ page, request }) => {
-        // Set realistic user agent
         await page.setExtraHTTPHeaders({
           "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -255,24 +306,16 @@ async function extractFromUrl(url, options = {}) {
           "Sec-Fetch-Mode": "navigate",
           "Sec-Fetch-Site": "none",
           "Sec-Fetch-User": "?1",
-          "Cache-Control": "max-age=0",
         });
 
-        // Hide webdriver property
         await page.addInitScript(() => {
           Object.defineProperty(navigator, "webdriver", {
             get: () => undefined,
           });
-
-          // Hide automation indicators
-          window.chrome = {
-            runtime: {},
-          };
-
+          window.chrome = { runtime: {} };
           Object.defineProperty(navigator, "plugins", {
             get: () => [1, 2, 3, 4, 5],
           });
-
           Object.defineProperty(navigator, "languages", {
             get: () => ["en-US", "en"],
           });
@@ -282,155 +325,175 @@ async function extractFromUrl(url, options = {}) {
       },
     ],
 
+    // Main request handler
     async requestHandler({ page, request }) {
-      console.log(`📄 Processing: ${request.url}`);
+      const url = request.url;
+      console.log(`📄 Processing: ${url}`);
 
-      // Wait for content with multiple strategies
       try {
+        // Wait for content
         await page.waitForLoadState("domcontentloaded", { timeout: 15000 });
-      } catch (e) {
-        console.log("⚠️ domcontentloaded timeout, continuing...");
-      }
+        await page.waitForTimeout(1500);
 
-      // Additional wait for dynamic content
-      await page.waitForTimeout(2000);
-
-      // Try to wait for main content
-      try {
-        await page.waitForSelector("body", { timeout: 5000 });
-      } catch (e) {
-        console.log("⚠️ Body selector timeout, continuing...");
-      }
-
-      // Remove unwanted elements
-      await page.evaluate((selectors) => {
-        selectors.forEach((selector) => {
-          try {
-            document.querySelectorAll(selector).forEach((el) => el.remove());
-          } catch (e) {}
-        });
-      }, SELECTORS_TO_REMOVE);
-
-      // Extract content
-      const data = await page.evaluate((mainSelectors) => {
-        // Find main content
-        let mainElement = null;
-        for (const selector of mainSelectors) {
-          mainElement = document.querySelector(selector);
-          if (mainElement) break;
-        }
-        mainElement = mainElement || document.body;
-
-        // Get text content
-        const textContent = mainElement.innerText
-          .replace(/\s+/g, " ")
-          .replace(/\n{3,}/g, "\n\n")
-          .trim();
-
-        // Get title
-        const title =
-          document.querySelector("h1")?.innerText ||
-          document.title ||
-          "Untitled";
-
-        // Get metadata
-        const getMetaContent = (name) => {
-          const meta = document.querySelector(
-            `meta[name="${name}"], meta[property="${name}"], meta[property="og:${name}"]`
-          );
-          return meta?.getAttribute("content") || null;
-        };
-
-        // Get headings
-        const headings = [];
-        document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((h, i) => {
-          headings.push({
-            level: parseInt(h.tagName[1]),
-            text: h.innerText.trim(),
+        // Remove unwanted elements
+        await page.evaluate((selectors) => {
+          selectors.forEach((selector) => {
+            try {
+              document.querySelectorAll(selector).forEach((el) => el.remove());
+            } catch (e) {}
           });
-        });
+        }, SELECTORS_TO_REMOVE);
 
-        // Get links
-        const links = [];
-        document.querySelectorAll("a[href]").forEach((a) => {
-          if (a.href && !a.href.startsWith("javascript:")) {
-            links.push({
-              url: a.href,
-              text: a.innerText.trim(),
-            });
+        // Extract content
+        const data = await page.evaluate((mainSelectors) => {
+          let mainElement = null;
+          for (const selector of mainSelectors) {
+            mainElement = document.querySelector(selector);
+            if (mainElement) break;
           }
-        });
+          mainElement = mainElement || document.body;
 
-        // Get images
-        const images = [];
-        document.querySelectorAll("img[src]").forEach((img) => {
-          if (img.src && !img.src.startsWith("data:")) {
-            images.push({
-              src: img.src,
-              alt: img.alt || "",
-            });
-          }
-        });
+          const textContent = mainElement.innerText
+            .replace(/\s+/g, " ")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
 
-        return {
-          title,
-          textContent,
-          description: getMetaContent("description"),
-          language: document.documentElement.lang || "en",
-          headings,
-          links: links.slice(0, 50),
-          images: images.slice(0, 20),
+          const title =
+            document.querySelector("h1")?.innerText?.trim() ||
+            document.title ||
+            "Untitled";
+
+          const getMetaContent = (name) => {
+            const meta = document.querySelector(
+              `meta[name="${name}"], meta[property="${name}"], meta[property="og:${name}"]`
+            );
+            return meta?.getAttribute("content") || null;
+          };
+
+          const headings = [];
+          document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((h) => {
+            const text = h.innerText?.trim();
+            if (text) {
+              headings.push({
+                level: parseInt(h.tagName[1]),
+                text: text,
+              });
+            }
+          });
+
+          const links = [];
+          document.querySelectorAll("a[href]").forEach((a) => {
+            if (a.href && !a.href.startsWith("javascript:")) {
+              links.push({
+                url: a.href,
+                text: a.innerText?.trim() || "",
+              });
+            }
+          });
+
+          const images = [];
+          document.querySelectorAll("img[src]").forEach((img) => {
+            if (img.src && !img.src.startsWith("data:")) {
+              images.push({
+                src: img.src,
+                alt: img.alt || "",
+              });
+            }
+          });
+
+          return {
+            title,
+            textContent,
+            description: getMetaContent("description"),
+            language: document.documentElement.lang || "en",
+            headings,
+            links: links.slice(0, 50),
+            images: images.slice(0, 20),
+          };
+        }, MAIN_CONTENT_SELECTORS);
+
+        // Format content
+        let content;
+        if (format === "markdown") {
+          content = formatAsMarkdown({ ...data, url });
+        } else {
+          content = data.textContent;
+        }
+
+        // Build result
+        const result = {
+          url,
+          timestamp: new Date().toISOString(),
+          title: data.title,
+          description: data.description,
+          content,
+          metadata: {
+            language: data.language,
+            wordCount: data.textContent.split(/\s+/).filter((w) => w).length,
+            headingCount: data.headings.length,
+            linkCount: data.links.length,
+            imageCount: data.images.length,
+          },
+          headings: data.headings,
+          links: data.links,
+          images: data.images,
+          status: "success",
         };
-      }, MAIN_CONTENT_SELECTORS);
 
-      // Format content
-      let content;
-      if (format === "markdown") {
-        content = formatAsMarkdown({ ...data, url: request.url });
-      } else {
-        content = data.textContent;
+        // Add chunks if requested
+        if (chunkContent) {
+          result.chunks = chunkText(data.textContent, chunkSize, chunkOverlap);
+          result.totalChunks = result.chunks.length;
+        }
+
+        // Save to dataset
+        await Dataset.pushData(result);
+        results.push(result);
+        successCount++;
+
+        console.log(
+          `✅ Extracted: ${data.title} (${result.metadata.wordCount} words)`
+        );
+      } catch (error) {
+        console.error(`❌ Error processing ${url}: ${error.message}`);
+
+        // Save failed result
+        const failedResult = {
+          url,
+          timestamp: new Date().toISOString(),
+          status: "failed",
+          error: error.message,
+        };
+
+        await Dataset.pushData(failedResult);
+        results.push(failedResult);
+        failCount++;
       }
-
-      // Build result
-      result = {
-        url: request.url,
-        timestamp: new Date().toISOString(),
-        title: data.title,
-        description: data.description,
-        content,
-        metadata: {
-          language: data.language,
-          wordCount: data.textContent.split(/\s+/).filter((w) => w).length,
-          headingCount: data.headings.length,
-          linkCount: data.links.length,
-          imageCount: data.images.length,
-        },
-        headings: data.headings,
-        links: data.links,
-        images: data.images,
-      };
-
-      // Add chunks if requested
-      if (chunkContent) {
-        result.chunks = chunkText(data.textContent, chunkSize, chunkOverlap);
-        result.totalChunks = result.chunks.length;
-      }
-
-      console.log(
-        `✅ Extracted: ${data.title} (${result.metadata.wordCount} words)`
-      );
     },
 
-    // Handle failures
+    // Handle navigation failures
     failedRequestHandler({ request }, error) {
-      console.error(`❌ Failed: ${request.url}`);
-      console.error(`   Error: ${error.message}`);
+      console.error(`❌ Failed to load: ${request.url}`);
+      console.error(`   Reason: ${error.message}`);
+      failCount++;
+
+      results.push({
+        url: request.url,
+        timestamp: new Date().toISOString(),
+        status: "failed",
+        error: error.message,
+      });
     },
   });
 
-  await crawler.run([url]);
+  // ⭐ Run crawler with ALL URLs at once
+  await crawler.run(urls);
 
-  return result;
+  console.log(
+    `\n📊 Summary: ${successCount} succeeded, ${failCount} failed out of ${urls.length} URLs`
+  );
+
+  return results;
 }
 
 // ============================================================
@@ -474,18 +537,12 @@ try {
     console.log("\n🔌 MCP Server Mode");
 
     if (mcpRequest) {
-      const response = await handleMCPRequest(mcpRequest, extractFromUrl);
+      const response = await handleMCPRequest(mcpRequest, runCrawler);
 
       const store = await Actor.openKeyValueStore();
       await store.setValue("MCP_RESPONSE", response);
 
-      await Dataset.pushData({
-        type: "mcp_response",
-        request: mcpRequest,
-        response,
-      });
-
-      console.log("✅ MCP Response:", JSON.stringify(response, null, 2));
+      console.log("✅ MCP Response saved");
     } else {
       const serverInfo = {
         protocol: "mcp",
@@ -507,33 +564,19 @@ try {
       throw new Error("At least one URL is required");
     }
 
-    console.log("\n🚀 Starting extraction...\n");
+    console.log("\n🚀 Starting extraction...");
 
-    for (const url of urls) {
-      try {
-        console.log(`\n📌 Extracting: ${url}`);
+    // ⭐ Process ALL URLs in one crawler run
+    const results = await runCrawler(urls, {
+      format: outputFormat,
+      chunkContent: aiOptions.chunkContent || false,
+      chunkSize: aiOptions.chunkSize || 1000,
+      chunkOverlap: aiOptions.chunkOverlap || 100,
+    });
 
-        const result = await extractFromUrl(url, {
-          format: outputFormat,
-          chunkContent: aiOptions.chunkContent || false,
-          chunkSize: aiOptions.chunkSize || 1000,
-          chunkOverlap: aiOptions.chunkOverlap || 100,
-        });
-
-        if (result) {
-          await Dataset.pushData(result);
-          console.log(`✅ Saved to dataset: ${result.title}`);
-        } else {
-          console.log(`⚠️ No result for: ${url}`);
-        }
-      } catch (error) {
-        console.error(`❌ Failed to extract ${url}: ${error.message}`);
-      }
-    }
-
-    // Get stats
-    const dataset = await Actor.openDataset();
-    const info = await dataset.getInfo();
+    // Calculate stats
+    const successResults = results.filter((r) => r.status === "success");
+    const failedResults = results.filter((r) => r.status === "failed");
 
     console.log(
       "\n╔════════════════════════════════════════════════════════════╗"
@@ -544,10 +587,22 @@ try {
     console.log(
       "╠════════════════════════════════════════════════════════════╣"
     );
-    console.log(`║  Pages Extracted: ${info.itemCount.toString().padEnd(41)}║`);
+    console.log(`║  Total URLs: ${urls.length.toString().padEnd(46)}║`);
+    console.log(
+      `║  Succeeded: ${successResults.length.toString().padEnd(47)}║`
+    );
+    console.log(`║  Failed: ${failedResults.length.toString().padEnd(50)}║`);
     console.log(
       "╚════════════════════════════════════════════════════════════╝"
     );
+
+    // Show failed URLs
+    if (failedResults.length > 0) {
+      console.log("\n⚠️ Failed URLs:");
+      failedResults.forEach((r) => {
+        console.log(`   - ${r.url}: ${r.error}`);
+      });
+    }
   }
 } catch (error) {
   console.error("❌ Error:", error.message);
