@@ -1,25 +1,50 @@
 {
   "requestsFinished": 0,
-  "requestsFailed": 0,
-  "requestsRetries": 0,
-  "requestsFailedPerMinute": 0,
+  "requestsFailed": 1,
+  "requestsRetries": 1,
+  "requestsFailedPerMinute": 1,
   "requestsFinishedPerMinute": 0,
   "requestMinDurationMillis": null,
   "requestMaxDurationMillis": 0,
-  "requestTotalFailedDurationMillis": 0,
+  "requestTotalFailedDurationMillis": 12390,
   "requestTotalFinishedDurationMillis": 0,
-  "crawlerStartedAt": "2025-12-19T11:12:28.511Z",
-  "crawlerFinishedAt": "2025-12-19T11:12:31.184Z",
-  "statsPersistedAt": "2025-12-19T11:12:31.184Z",
-  "crawlerRuntimeMillis": 2886,
-  "crawlerLastStartTimestamp": 1766142748298,
-  "requestRetryHistogram": [],
+  "crawlerStartedAt": "2025-12-25T12:20:45.434Z",
+  "crawlerFinishedAt": "2025-12-25T12:21:40.274Z",
+  "statsPersistedAt": "2025-12-25T12:21:40.274Z",
+  "crawlerRuntimeMillis": 55165,
+  "crawlerLastStartTimestamp": 1766665245109,
+  "requestRetryHistogram": [
+    null,
+    null,
+    null,
+    1
+  ],
   "statsId": 0,
-  "requestAvgFailedDurationMillis": null,
+  "requestAvgFailedDurationMillis": 12390,
   "requestAvgFinishedDurationMillis": null,
-  "requestTotalDurationMillis": 0,
-  "requestsTotal": 0,
+  "requestTotalDurationMillis": 12390,
+  "requestsTotal": 1,
   "requestsWithStatusCode": {},
-  "errors": {},
-  "retryErrors": {}
+  "errors": {
+    "C:\\Users\\lenovo\\OneDrive\\Desktop\\Projects\\Ai_web_extractors\\node_modules\\@crawlee\\playwright\\internals\\utils\\playwright-utils.js:166:17": {
+      "missing error code": {
+        "Error": {
+          "page.goto: net::ERR_EMPTY_RESPONSE at https://docs.apify.com/academy/web-scraping-for-beginners": {
+            "count": 1
+          }
+        }
+      }
+    }
+  },
+  "retryErrors": {
+    "C:\\Users\\lenovo\\OneDrive\\Desktop\\Projects\\Ai_web_extractors\\node_modules\\@crawlee\\playwright\\internals\\utils\\playwright-utils.js:166:17": {
+      "missing error code": {
+        "Error": {
+          "page.goto: net::ERR_EMPTY_RESPONSE at https://docs.apify.com/academy/web-scraping-for-beginners": {
+            "count": 3
+          }
+        }
+      }
+    }
+  }
 }
