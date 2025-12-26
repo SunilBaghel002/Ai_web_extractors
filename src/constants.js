@@ -58,9 +58,32 @@ export const OUTPUT_FORMATS = {
 export const MODES = {
   EXTRACTOR: "extractor",
   MCP_SERVER: "mcp-server",
+  CODE_EXTRACTOR: "code-extractor",
 };
 
 export const MCP_PROTOCOL_VERSION = "2024-11-05";
 
 export const DEFAULT_CHUNK_SIZE = 1000;
 export const DEFAULT_CHUNK_OVERLAP = 100;
+
+// AI Provider configurations
+export const AI_PROVIDERS = {
+  GROQ: "groq",
+  GEMINI: "gemini",
+  HUGGINGFACE: "huggingface",
+  TOGETHER: "together",
+  COHERE: "cohere",
+  OLLAMA: "ollama",
+};
+
+// Supported code platforms
+export const CODE_PLATFORMS = [
+  "github.com",
+  "gitlab.com",
+  "bitbucket.org",
+  "stackoverflow.com",
+  "codepen.io",
+  "jsfiddle.net",
+  "replit.com",
+  "gist.github.com",
+];
