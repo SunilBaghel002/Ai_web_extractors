@@ -79,3 +79,5 @@
 │  └── Category Banners        └── Promotional Emails             │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
+
+i have to create a ecommerce website which can sell everything from small to big and i have to integrate a payment system in it also and other thing also by which an ecommerce website is very useful i have to use react js in frontend and express.js in backend, database is mongoDB altas, google oauth and manually register also first tell me how can i do this and what i have to do then what are the features and functionality of this website
