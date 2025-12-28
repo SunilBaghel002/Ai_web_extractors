@@ -6,19 +6,66 @@ export function getMCPTools() {
   return [
     // ==================== WEB EXTRACTION ====================
     {
-      name: "extract_webpage",
-      description: "Extract clean, structured content from a webpage",
+      name: "extract_with_instruction",
+      description:
+        "Extract content from a URL based on natural language instructions. Tell the scraper exactly what you want!",
       inputSchema: {
         type: "object",
         properties: {
-          url: { type: "string", description: "URL to extract" },
+          url: {
+            type: "string",
+            description: "URL to extract from",
+          },
+          instruction: {
+            type: "string",
+            description:
+              "Natural language instruction describing what to extract (e.g., 'get all pricing information', 'extract the main article', 'get all code files')",
+          },
+          useAI: {
+            type: "boolean",
+            default: false,
+            description:
+              "Use AI to help understand and process the instruction",
+          },
+        },
+        required: ["url", "instruction"],
+      },
+    },
+    {
+      name: "extract_multiple_with_instruction",
+      description: "Extract from multiple URLs using the same instruction",
+      inputSchema: {
+        type: "object",
+        properties: {
+          urls: {
+            type: "array",
+            items: { type: "string" },
+            description: "URLs to extract from",
+          },
+          instruction: {
+            type: "string",
+            description: "What to extract from each URL",
+          },
+          useAI: {
+            type: "boolean",
+            default: false,
+          },
+        },
+        required: ["urls", "instruction"],
+      },
+    },
+    {
+      name: "extract_webpage",
+      description: "Extract clean content from a webpage (legacy method)",
+      inputSchema: {
+        type: "object",
+        properties: {
+          url: { type: "string" },
           format: {
             type: "string",
-            enum: ["markdown", "text", "html", "structured"],
+            enum: ["markdown", "text", "structured"],
             default: "markdown",
           },
-          includeImages: { type: "boolean", default: true },
-          includeLinks: { type: "boolean", default: true },
         },
         required: ["url"],
       },
