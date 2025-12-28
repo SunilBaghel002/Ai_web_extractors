@@ -1,8 +1,3 @@
-/**
- * AI Web & Code Extractor - FULL VERSION
- * With FREE AI Integration & GitHub Support
- */
-
 import "dotenv/config";
 import { Actor } from "apify";
 import { PlaywrightCrawler, Dataset } from "crawlee";
@@ -19,11 +14,13 @@ import {
   analyzeCode,
   explainCode,
   generateDocs,
-  improveCode,
+  improveCode,  
   summarizeContent,
 } from "./ai/code-analyzer.js";
 import { callAI, getAvailableProviders, testProvider } from "./ai/providers.js";
 import { getMCPTools } from "./mcp/tools.js";
+import { parseInstruction, createExtractionPlan } from './ai/instruction-parser.js';
+import { executeExtractionPlan, postProcessWithAI } from './extractors/intelligent-extractor.js';
 
 // ============================================================
 // CONSTANTS
