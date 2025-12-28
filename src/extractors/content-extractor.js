@@ -6,7 +6,24 @@
  * Extract structured content from the page
  */
 export async function extractContent(page, options = {}) {
-  const content = await page.evaluate((opts) => {
+  // Ensure options has default values
+  const opts = {
+    includeLinks:
+      options.includeLinks !== undefined ? options.includeLinks : false,
+    includeTables:
+      options.includeTables !== undefined ? options.includeTables : false,
+    includeCode:
+      options.includeCode !== undefined ? options.includeCode : false,
+    includeImages:
+      options.includeImages !== undefined ? options.includeImages : false,
+    includeLists:
+      options.includeLists !== undefined ? options.includeLists : true,
+    includeHeadings:
+      options.includeHeadings !== undefined ? options.includeHeadings : true,
+    ...options,
+  };
+
+  const content = await page.evaluate((extractOptions) => {
     const result = {
       headings: [],
       paragraphs: [],
@@ -31,13 +48,12 @@ export async function extractContent(page, options = {}) {
     document.querySelectorAll("p").forEach((p) => {
       const text = p.innerText.trim();
       if (text.length > 20) {
-        // Filter out short fragments
         result.paragraphs.push(text);
       }
     });
 
     // Extract links
-    if (opts.includeLinks) {
+    if (extractOptions.includeLinks) {
       document.querySelectorAll("a[href]").forEach((link) => {
         const href = link.href;
         const text = link.innerText.trim();
@@ -59,7 +75,7 @@ export async function extractContent(page, options = {}) {
     }
 
     // Extract tables
-    if (opts.includeTables) {
+    if (extractOptions.includeTables) {
       document.querySelectorAll("table").forEach((table, tableIndex) => {
         const tableData = {
           index: tableIndex,
@@ -73,7 +89,7 @@ export async function extractContent(page, options = {}) {
         });
 
         // Get rows
-        table.querySelectorAll("tbody tr").forEach((tr) => {
+        table.querySelectorAll("tbody tr, tr").forEach((tr) => {
           const row = [];
           tr.querySelectorAll("td").forEach((td) => {
             row.push(td.innerText.trim());
@@ -90,7 +106,7 @@ export async function extractContent(page, options = {}) {
     }
 
     // Extract code blocks
-    if (opts.includeCode) {
+    if (extractOptions.includeCode) {
       document.querySelectorAll("pre, code").forEach((code, index) => {
         const text = code.innerText.trim();
         if (text.length > 10) {
@@ -109,22 +125,24 @@ export async function extractContent(page, options = {}) {
     }
 
     // Extract lists
-    document.querySelectorAll("ul, ol").forEach((list, index) => {
-      const items = [];
-      list.querySelectorAll(":scope > li").forEach((li) => {
-        items.push(li.innerText.trim());
-      });
-
-      if (items.length > 0) {
-        result.lists.push({
-          type: list.tagName.toLowerCase(),
-          items,
+    if (extractOptions.includeLists) {
+      document.querySelectorAll("ul, ol").forEach((list, index) => {
+        const items = [];
+        list.querySelectorAll(":scope > li").forEach((li) => {
+          items.push(li.innerText.trim());
         });
-      }
-    });
+
+        if (items.length > 0) {
+          result.lists.push({
+            type: list.tagName.toLowerCase(),
+            items,
+          });
+        }
+      });
+    }
 
     return result;
-  }, options);
+  }, opts);
 
   return content;
 }
