@@ -1,18 +1,137 @@
 {
-  "actorSpecification": 1,
-  "name": "ai-web-content-extractor",
-  "title": "AI Web Content Extractor",
-  "description": "Extract clean, structured content from websites for AI agents and LLMs. Includes MCP server for direct AI integration.",
-  "version": "1.0.0",
-  "buildTag": "latest",
-  "input": "./input_schema.json",
-  "dockerfile": "./Dockerfile",
-  "readme": "../README.md",
-  "storages": {
-    "dataset": {
-      "actorSpecification": 1,
-      "title": "Extracted Content",
-      "description": "Clean, structured content extracted from websites"
+  "title": "AI Web & Code Extractor Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "urls": {
+      "title": "URLs to Extract",
+      "type": "array",
+      "description": "List of URLs to extract from (websites, GitHub, StackOverflow, etc.)",
+      "editor": "stringList",
+      "placeholderValue": ["https://example.com"]
+    },
+    "instruction": {
+      "title": "Extraction Instruction (Optional)",
+      "type": "string",
+      "description": "Natural language instruction: 'Extract pricing', 'Get all code', 'Find contact info', etc.",
+      "editor": "textarea",
+      "placeholderValue": "Extract the main content"
+    },
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "Extraction mode",
+      "enum": [
+        "extractor",
+        "instruction-based",
+        "code-extractor",
+        "mcp-server"
+      ],
+      "default": "extractor"
+    },
+    "outputFormat": {
+      "title": "Output Format",
+      "type": "string",
+      "description": "Format for extracted content",
+      "enum": ["markdown", "text", "html", "structured"],
+      "default": "markdown"
+    },
+    "aiOptions": {
+      "title": "AI Options",
+      "type": "object",
+      "description": "AI configuration",
+      "editor": "json",
+      "properties": {
+        "useAI": {
+          "title": "Use AI",
+          "type": "boolean",
+          "default": false
+        },
+        "provider": {
+          "title": "AI Provider",
+          "type": "string",
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "groq",
+            "ollama",
+            "huggingface"
+          ],
+          "default": "groq"
+        },
+        "apiKey": {
+          "title": "AI API Key",
+          "type": "string",
+          "isSecret": true
+        },
+        "model": {
+          "title": "AI Model",
+          "type": "string"
+        },
+        "task": {
+          "title": "AI Task",
+          "type": "string",
+          "enum": ["analyze", "explain", "summarize", "document", "improve"],
+          "default": "analyze"
+        }
+      }
+    },
+    "codeOptions": {
+      "title": "Code Extraction Options",
+      "type": "object",
+      "editor": "json",
+      "properties": {
+        "maxFiles": {
+          "title": "Max Files",
+          "type": "integer",
+          "default": 50
+        },
+        "extensions": {
+          "title": "File Extensions",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "includeTests": {
+          "title": "Include Tests",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "crawlOptions": {
+      "title": "Crawl Options",
+      "type": "object",
+      "editor": "json",
+      "properties": {
+        "followLinks": {
+          "title": "Follow Links",
+          "type": "boolean",
+          "default": false
+        },
+        "maxDepth": {
+          "title": "Max Depth",
+          "type": "integer",
+          "default": 0
+        },
+        "maxPages": {
+          "title": "Max Pages",
+          "type": "integer",
+          "default": 10
+        },
+        "slowMode": {
+          "title": "Slow Mode",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "proxyConfiguration": {
+      "title": "Proxy Configuration",
+      "type": "object",
+      "description": "Proxy settings",
+      "editor": "proxy"
     }
-  }
+  },
+  "required": ["urls"]
 }
