@@ -2,7 +2,7 @@
  * Parse user instructions and determine extraction strategy
  */
 
-import { getAIProvider } from "./providers.js";
+import { callAI } from "./providers.js";
 
 /**
  * Parse user instruction to determine what to extract
@@ -228,8 +228,6 @@ async function aiParseInstruction(instruction, url, aiConfig) {
   const { aiProvider, aiApiKey, aiModel } = aiConfig;
 
   try {
-    const ai = getAIProvider(aiProvider, aiApiKey, { model: aiModel });
-
     const prompt = `Analyze this user instruction for web scraping and determine the extraction intent.
 
 User Instruction: "${instruction}"
@@ -250,10 +248,15 @@ Respond in JSON format:
 
 Only respond with valid JSON.`;
 
-    const response = await ai.complete(prompt, { maxTokens: 300 });
+    const response = await callAI(prompt, {
+      provider: aiProvider,
+      model: aiModel,
+      maxTokens: 300,
+      temperature: 0.3,
+    });
 
     // Parse AI response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    const jsonMatch = response.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
       return {
