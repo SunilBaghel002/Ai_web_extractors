@@ -7,6 +7,7 @@ import { extractMetadata } from "./metadata-extractor.js";
 import { extractMedia } from "./media-extractor.js";
 import { isCodePlatform, extractCodeContent } from "./code-extractor.js";
 import { extractStructuredData } from "./structured-extractor.js";
+import { callAI } from "../ai/providers.js";
 
 /**
  * Execute extraction based on plan
@@ -119,11 +120,6 @@ export async function postProcessWithAI(results, plan, aiConfig) {
 
   console.log(`🤖 Post-processing with AI: ${plan.aiTask}`);
 
-  const { getAIProvider } = await import("../ai/providers.js");
-  const ai = getAIProvider(aiConfig.aiProvider, aiConfig.aiApiKey, {
-    model: aiConfig.aiModel,
-  });
-
   let prompt = "";
   let dataContext = JSON.stringify(results.data, null, 2).substring(0, 8000);
 
@@ -166,10 +162,18 @@ Provide the requested information.`;
   }
 
   try {
-    const aiResponse = await ai.complete(prompt, { maxTokens: 1000 });
+    const aiResponse = await callAI(prompt, {
+      provider: aiConfig.aiProvider,
+      model: aiConfig.aiModel,
+      maxTokens: 1000,
+      temperature: 0.3,
+    });
+
     results.aiProcessing = {
       task: plan.aiTask,
-      response: aiResponse,
+      response: aiResponse.content,
+      provider: aiResponse.provider,
+      model: aiResponse.model,
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
