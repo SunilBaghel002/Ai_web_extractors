@@ -14,13 +14,25 @@ import {
   analyzeCode,
   explainCode,
   generateDocs,
-  improveCode,  
+  improveCode,
   summarizeContent,
 } from "./ai/code-analyzer.js";
-import { callAI, getAvailableProviders, testProvider } from "./ai/providers.js";
+import {
+  callAI,
+  getAvailableProviders,
+  testProvider,
+  isAIConfigured,
+  validateAIConfig,
+} from "./ai/index.js";
 import { getMCPTools } from "./mcp/tools.js";
-import { parseInstruction, createExtractionPlan } from './ai/instruction-parser.js';
-import { executeExtractionPlan, postProcessWithAI } from './extractors/intelligent-extractor.js';
+import {
+  parseInstruction,
+  createExtractionPlan,
+} from "./ai/instruction-parser.js";
+import {
+  executeExtractionPlan,
+  postProcessWithAI,
+} from "./extractors/intelligent-extractor.js";
 
 // ============================================================
 // CONSTANTS
@@ -60,12 +72,21 @@ const USER_AGENTS = [
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
 ];
 
+const STEALTH_SCRIPTS = `
+  Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+  window.chrome = { runtime: {}, loadTimes: function() {}, csi: function() {}, app: {} };
+`;
+
 // ============================================================
 // UTILITY FUNCTIONS
 // ============================================================
 
 function getRandomUserAgent() {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+function getRandomDelay(min = 1000, max = 3000) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function chunkText(text, chunkSize = 1000, overlap = 100) {
@@ -124,9 +145,56 @@ function formatAsMarkdown(data) {
     lines.push("", "---", "");
   }
 
-  lines.push("## Content", "", data.textContent);
+  lines.push("## Content", "", data.textContent || "");
 
   return lines.join("\n");
+}
+
+async function autoScroll(page) {
+  try {
+    await page.evaluate(async () => {
+      await new Promise((resolve) => {
+        let totalHeight = 0;
+        const distance = 300;
+        const timer = setInterval(() => {
+          const scrollHeight = document.body.scrollHeight;
+          window.scrollBy(0, distance);
+          totalHeight += distance;
+          if (totalHeight >= scrollHeight || totalHeight > 5000) {
+            clearInterval(timer);
+            window.scrollTo(0, 0);
+            resolve();
+          }
+        }, 100);
+      });
+    });
+  } catch (e) {
+    // Ignore scroll errors
+  }
+}
+
+async function dismissCookieBanners(page) {
+  const cookieButtonSelectors = [
+    'button[id*="accept"]',
+    'button[class*="accept"]',
+    'button[id*="cookie"]',
+    'button[class*="cookie"]',
+    'button:has-text("Accept")',
+    'button:has-text("I agree")',
+  ];
+
+  for (const selector of cookieButtonSelectors) {
+    try {
+      const button = await page.$(selector);
+      if (button) {
+        await button.click();
+        await page.waitForTimeout(500);
+        break;
+      }
+    } catch (e) {
+      // Ignore
+    }
+  }
 }
 
 // ============================================================
@@ -155,10 +223,218 @@ async function extractCode(url, options = {}) {
 }
 
 // ============================================================
-// MCP REQUEST HANDLER
+// INSTRUCTION-BASED CRAWLER
 // ============================================================
 
-async function handleMCPRequest(request, runCrawler) {
+async function runInstructionBasedCrawler(urls, instruction, options = {}) {
+  const {
+    useProxy = false,
+    slowMode = false,
+    aiProvider = null,
+    aiApiKey = null,
+    aiModel = null,
+  } = options;
+
+  const results = [];
+  let successCount = 0;
+  let failCount = 0;
+
+  console.log(`\n📋 Processing ${urls.length} URL(s) with instruction...`);
+  console.log(`📝 Instruction: "${instruction}"`);
+
+  const aiConfig = {
+    aiProvider,
+    aiApiKey,
+    aiModel,
+  };
+
+  // Parse instruction once (applies to all URLs)
+  const parsedInstruction = await parseInstruction(
+    instruction,
+    urls[0],
+    isAIConfigured(aiProvider, aiApiKey) ? aiConfig : null
+  );
+
+  console.log(`✅ Parsed intent: ${parsedInstruction.intent}`);
+  console.log(`🎯 Targets: ${parsedInstruction.targets.join(", ")}`);
+
+  // Create proxy configuration if enabled
+  let proxyConfiguration;
+  if (useProxy) {
+    try {
+      proxyConfiguration = await Actor.createProxyConfiguration({
+        groups: ["RESIDENTIAL"],
+        countryCode: "US",
+      });
+      console.log("✅ Proxy configured");
+    } catch (error) {
+      console.log("⚠️ Proxy not available");
+      proxyConfiguration = undefined;
+    }
+  }
+
+  const crawler = new PlaywrightCrawler({
+    maxRequestsPerCrawl: urls.length + 10,
+    maxConcurrency: slowMode ? 1 : 3,
+    requestHandlerTimeoutSecs: 120,
+    navigationTimeoutSecs: 60,
+    proxyConfiguration,
+    headless: true,
+
+    launchContext: {
+      launchOptions: {
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-blink-features=AutomationControlled",
+          "--window-size=1920,1080",
+        ],
+      },
+    },
+
+    browserPoolOptions: {
+      useFingerprints: true,
+    },
+
+    preNavigationHooks: [
+      async ({ page, request }) => {
+        const userAgent = getRandomUserAgent();
+
+        await page.setExtraHTTPHeaders({
+          "User-Agent": userAgent,
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        });
+
+        await page.addInitScript(STEALTH_SCRIPTS);
+        await page.setViewportSize({ width: 1920, height: 1080 });
+
+        console.log(`🌐 Navigating to: ${request.url}`);
+
+        if (slowMode) {
+          const delay = getRandomDelay(3000, 7000);
+          await new Promise((r) => setTimeout(r, delay));
+        }
+      },
+    ],
+
+    async requestHandler({ page, request }) {
+      const url = request.url;
+
+      console.log(`📄 Processing: ${url}`);
+      console.log(`🎯 Task: ${parsedInstruction.intent}`);
+
+      try {
+        await page.waitForLoadState("domcontentloaded", { timeout: 30000 });
+        await page.waitForTimeout(getRandomDelay(1000, 2000));
+
+        // Scroll and clean
+        await autoScroll(page);
+        await dismissCookieBanners(page);
+
+        await page.evaluate((selectors) => {
+          selectors.forEach((sel) => {
+            try {
+              document.querySelectorAll(sel).forEach((el) => el.remove());
+            } catch (e) {}
+          });
+        }, SELECTORS_TO_REMOVE);
+
+        // Create extraction plan for this URL
+        const plan = createExtractionPlan(parsedInstruction, url);
+
+        // Execute extraction based on plan
+        let result = await executeExtractionPlan(page, plan, aiConfig);
+
+        // Post-process with AI if needed
+        if (plan.requiresAI && isAIConfigured(aiProvider, aiApiKey)) {
+          result = await postProcessWithAI(result, plan, aiConfig);
+        }
+
+        // Add metadata
+        result.status = "success";
+        result.extractedAt = new Date().toISOString();
+
+        // Save to dataset
+        await Dataset.pushData(result);
+        results.push(result);
+        successCount++;
+
+        console.log(`✅ Extracted successfully: ${parsedInstruction.intent}`);
+
+        // Log what was found
+        if (result.data.code) {
+          console.log(
+            `   💻 Code: ${result.data.code.files?.length || 0} files`
+          );
+        }
+        if (result.data.images) {
+          console.log(`   🖼️ Images: ${result.data.images.length}`);
+        }
+        if (result.data.tables) {
+          console.log(`   📊 Tables: ${result.data.tables.length}`);
+        }
+        if (result.data.pricing) {
+          console.log(`   💰 Pricing: ${result.data.pricing.length} items`);
+        }
+        if (result.data.contact) {
+          console.log(
+            `   📧 Contact: ${result.data.contact.emails?.length || 0} emails`
+          );
+        }
+        if (result.aiProcessing) {
+          console.log(`   🤖 AI: ${result.aiProcessing.task}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error processing ${url}: ${error.message}`);
+
+        const failedResult = {
+          url,
+          instruction,
+          timestamp: new Date().toISOString(),
+          status: "failed",
+          error: error.message,
+        };
+
+        await Dataset.pushData(failedResult);
+        results.push(failedResult);
+        failCount++;
+      }
+    },
+
+    failedRequestHandler({ request }, error) {
+      console.error(`❌ Failed to load: ${request.url}`);
+      failCount++;
+
+      results.push({
+        url: request.url,
+        instruction,
+        timestamp: new Date().toISOString(),
+        status: "failed",
+        error: error.message,
+      });
+    },
+  });
+
+  const requests = urls.map((url) => ({
+    url,
+    userData: { instruction },
+  }));
+
+  await crawler.run(requests);
+
+  console.log(`\n📊 Summary: ${successCount} succeeded, ${failCount} failed`);
+
+  return results;
+}
+
+// ============================================================
+// MCP REQUEST HANDLER (Updated)
+// ============================================================
+
+async function handleMCPRequest(request) {
   const { method, params, id } = request;
   console.log(`📥 MCP Request: ${method}`);
 
@@ -185,7 +461,34 @@ async function handleMCPRequest(request, runCrawler) {
         let content;
 
         switch (name) {
-          // Web extraction tools
+          // NEW: Instruction-based extraction
+          case "extract_with_instruction":
+            content = await runInstructionBasedCrawler(
+              [args.url],
+              args.instruction,
+              {
+                aiProvider: args.useAI ? args.aiProvider || "ollama" : null,
+                aiApiKey: args.aiApiKey,
+                aiModel: args.aiModel,
+                useProxy: args.useProxy,
+              }
+            );
+            break;
+
+          case "extract_multiple_with_instruction":
+            content = await runInstructionBasedCrawler(
+              args.urls,
+              args.instruction,
+              {
+                aiProvider: args.useAI ? args.aiProvider || "ollama" : null,
+                aiApiKey: args.aiApiKey,
+                aiModel: args.aiModel,
+                useProxy: args.useProxy,
+              }
+            );
+            break;
+
+          // Existing tools
           case "extract_webpage":
           case "extract_multiple":
           case "crawl_website":
@@ -313,7 +616,7 @@ async function handleMCPRequest(request, runCrawler) {
 }
 
 // ============================================================
-// MAIN CRAWLER FUNCTION
+// MAIN CRAWLER FUNCTION (Original)
 // ============================================================
 
 async function runCrawler(urls, options = {}) {
@@ -386,7 +689,9 @@ async function runCrawler(urls, options = {}) {
 
         await page.evaluate((selectors) => {
           selectors.forEach((sel) => {
-            document.querySelectorAll(sel).forEach((el) => el.remove());
+            try {
+              document.querySelectorAll(sel).forEach((el) => el.remove());
+            } catch (e) {}
           });
         }, SELECTORS_TO_REMOVE);
 
@@ -554,6 +859,7 @@ try {
     input = {
       urls: ["https://example.com"],
       mode: "extractor",
+      instruction: "extract the main content",
       outputFormat: "markdown",
     };
   }
@@ -561,6 +867,7 @@ try {
   const {
     urls = [],
     mode = "extractor",
+    instruction = null,
     outputFormat = "markdown",
     aiOptions = {},
     mcpRequest = null,
@@ -571,13 +878,19 @@ try {
 
   const useAI = aiOptions.useAI || false;
   const aiProvider = aiOptions.provider || process.env.AI_PROVIDER || "groq";
+  const aiApiKey = aiOptions.apiKey || process.env.AI_API_KEY;
+  const aiModel = aiOptions.model;
   const aiTask = aiOptions.task || "analyze";
 
   console.log("╔════════════════════════════════════════════════════════════╗");
   console.log("║       🤖 AI WEB & CODE EXTRACTOR v2.0                      ║");
+  console.log("║          Instruction-Based Smart Extraction                ║");
   console.log("╠════════════════════════════════════════════════════════════╣");
   console.log(`║  Mode: ${mode.padEnd(52)}║`);
   console.log(`║  URLs: ${urls.length.toString().padEnd(52)}║`);
+  if (instruction) {
+    console.log(`║  Instruction: ${instruction.substring(0, 44).padEnd(44)}║`);
+  }
   console.log(`║  Format: ${outputFormat.padEnd(50)}║`);
   if (useAI) {
     console.log(`║  AI: ${aiProvider.padEnd(54)}║`);
@@ -600,16 +913,31 @@ try {
     console.log("\n🔌 MCP Server Mode");
 
     if (mcpRequest) {
-      const response = await handleMCPRequest(mcpRequest, runCrawler);
+      const response = await handleMCPRequest(mcpRequest);
       const store = await Actor.openKeyValueStore();
       await store.setValue("MCP_RESPONSE", response);
       console.log("✅ MCP Response saved");
+      console.log(JSON.stringify(response, null, 2));
     } else {
       const serverInfo = {
         protocol: "mcp",
         version: "2024-11-05",
         tools: getMCPTools(),
         aiProviders: getAvailableProviders(),
+        examples: [
+          {
+            instruction: "Get all pricing information",
+            type: "structured_data",
+          },
+          {
+            instruction: "Extract the main article and images",
+            type: "content_media",
+          },
+          {
+            instruction: "Get all code files from GitHub",
+            type: "code_extraction",
+          },
+        ],
       };
       const store = await Actor.openKeyValueStore();
       await store.setValue("MCP_SERVER_INFO", serverInfo);
@@ -619,6 +947,69 @@ try {
         console.log(
           `   - ${tool.name}: ${tool.description.substring(0, 60)}...`
         );
+      });
+
+      console.log("\n📝 Example Instructions:");
+      console.log("   - 'Extract all pricing information'");
+      console.log("   - 'Get the main article content'");
+      console.log("   - 'Extract all images and their descriptions'");
+      console.log("   - 'Get contact information'");
+      console.log("   - 'Extract all code from the repository'");
+    }
+  }
+  // Instruction-Based Extractor Mode
+  else if (mode === "instruction-based" || instruction) {
+    console.log("\n📝 Instruction-Based Extraction Mode");
+
+    if (!instruction) {
+      throw new Error("Instruction is required for instruction-based mode");
+    }
+
+    const results = await runInstructionBasedCrawler(urls, instruction, {
+      useProxy: proxyConfiguration?.useApifyProxy || false,
+      slowMode: crawlOptions?.slowMode || false,
+      aiProvider: useAI ? aiProvider : null,
+      aiApiKey,
+      aiModel,
+    });
+
+    const successResults = results.filter((r) => r.status === "success");
+    const failedResults = results.filter((r) => r.status === "failed");
+
+    console.log(
+      "\n╔════════════════════════════════════════════════════════════╗"
+    );
+    console.log(
+      "║                    ✅ EXTRACTION COMPLETE                   ║"
+    );
+    console.log(
+      "╠════════════════════════════════════════════════════════════╣"
+    );
+    console.log(`║  Total URLs: ${urls.length.toString().padEnd(46)}║`);
+    console.log(
+      `║  Succeeded: ${successResults.length.toString().padEnd(47)}║`
+    );
+    console.log(`║  Failed: ${failedResults.length.toString().padEnd(50)}║`);
+    console.log(
+      "╚════════════════════════════════════════════════════════════╝"
+    );
+
+    if (successResults.length > 0) {
+      console.log("\n📦 Extracted Data Summary:");
+      successResults.forEach((r) => {
+        console.log(`\n   URL: ${r.url}`);
+        console.log(`   Intent: ${r.intent}`);
+
+        const data = r.data;
+        if (data.code)
+          console.log(`   💻 Code files: ${data.code.files?.length || 0}`);
+        if (data.images) console.log(`   🖼️ Images: ${data.images.length}`);
+        if (data.links) console.log(`   🔗 Links: ${data.links.length}`);
+        if (data.tables) console.log(`   📊 Tables: ${data.tables.length}`);
+        if (data.pricing)
+          console.log(`   💰 Pricing items: ${data.pricing.length}`);
+        if (data.contact) console.log(`   📧 Contact info: Found`);
+        if (r.aiProcessing) console.log(`   🤖 AI: ${r.aiProcessing.task}`);
       });
     }
   }
@@ -728,5 +1119,3 @@ try {
 }
 
 await Actor.exit();
-
-console.log("Sunil is coding!!!")
