@@ -1,0 +1,95 @@
+Pricing & Plans Extraction
+{
+  "urls": [
+    "https://railway.com/pricing",
+    "https://vercel.com/pricing",
+    "https://render.com/pricing"
+  ],
+  "mode": "instruction-based",
+  "instruction": "Extract all pricing information: plan names, prices, features included in each plan, billing options (monthly/yearly), free tier details, and any limitations. Organize this in a structured format for easy comparison.",
+  "outputFormat": "structured",
+  "aiOptions": {
+    "useAI": true,
+    "task": "analyze"
+  }
+}
+
+ Lead Generation & Contact Finder
+{
+  "urls": [
+    "https://ahilyaagrofoods.online",
+    "https://example-company.com/contact",
+    "https://another-business.com/about"
+  ],
+  "mode": "instruction-based",
+  "instruction": "Extract all contact and business information: company name, email addresses, phone numbers, physical address, social media links (LinkedIn, Twitter, Facebook, Instagram), team members if visible, and any contact forms. Also identify the business type and industry.",
+  "outputFormat": "structured",
+  "aiOptions": {
+    "useAI": true,
+    "task": "analyze"
+  }
+}
+
+
+Documentation & Tutorial Extraction
+{
+  "urls": ["https://docs.github.com/en/get-started/quickstart/hello-world"],
+  "mode": "instruction-based",
+  "instruction": "Extract this tutorial completely: main topic, step-by-step instructions, code examples, important notes and warnings, prerequisites, and expected outcomes. Format as a comprehensive learning guide.",
+  "outputFormat": "markdown",
+  "aiOptions": {
+    "useAI": true,
+    "task": "explain"
+  },
+  "crawlOptions": {
+    "followLinks": false
+  }
+}
+
+News/Blog Article Summarization
+{
+  "urls": [
+    "https://techcrunch.com/2024/01/15/latest-ai-news/",
+    "https://www.theverge.com/tech/article-slug",
+    "https://medium.com/@author/interesting-article"
+  ],
+  "mode": "instruction-based",
+  "instruction": "Extract and analyze each article: title, author, publication date, main content, key points (bullet points), summary (3-5 sentences), sentiment (positive/negative/neutral), topics/tags, and any mentioned companies or products.",
+  "outputFormat": "structured",
+  "aiOptions": {
+    "useAI": true,
+    "task": "summarize"
+  }
+}
+
+GitHub Repository Analysis
+{
+  "urls": ["https://github.com/facebook/react"],
+  "mode": "code-extractor",
+  "instruction": "Analyze this repository: what is it, what programming languages are used, key features, installation instructions, and usage examples",
+  "aiOptions": {
+    "useAI": true,
+    "task": "analyze"
+  },
+  "codeOptions": {
+    "maxFiles": 20,
+    "includeTests": false
+  }
+}
+
+E-commerce Product Extraction
+{
+  "urls": ["https://example-shop.com/products"],
+  "mode": "instruction-based",
+  "instruction": "Extract all products: product names, prices, descriptions, images, ratings if available, availability status, and categories. Organize by category.",
+  "outputFormat": "structured",
+  "aiOptions": {
+    "useAI": true,
+    "task": "analyze"
+  },
+  "crawlOptions": {
+    "followLinks": true,
+    "maxDepth": 1,
+    "maxPages": 20
+  }
+}
